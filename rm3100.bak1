@@ -1,0 +1,144 @@
+#include "rm3100.h"
+#include "stm32f1xx.h"
+#include "stdio.h"
+
+//extern I2C_HandleTypeDef hi2c1;
+
+
+#define RM3100_ADDRESSES {0x1E, 0x1F} // 假设两个传感器的地址分别为0x1E和0x1F
+
+
+MagneticData sensorData[NUM_SENSORS]; // 存储每个传感器的磁场数据
+
+HAL_StatusTypeDef RM3100_I2C[NUM_SENSORS]; // 存储每个传感器的I2C句柄
+
+/**
+ * @brief 初始化多个 RM3100 设备
+ *
+ * 该函数初始化多个 RM3100 设备，包括读取设备 ID 和配置控制寄存器。
+ * 如果设备 ID 读取失败或配置失败，则返回错误。
+ *
+ * @return uint8_t 返回 0 表示成功，返回 1 表示失败
+ */
+uint8_t RM3100_InitMultiple(void) {
+    uint8_t result = 0;
+    for (int i = 0; i < NUM_SENSORS; i++) {
+        RM3100_I2C[i].Instance = hi2c1.Instance; // 假设所有传感器使用同一个I2C实例
+        RM3100_I2C[i].Init.Timing = hi2c1.Init.Timing;
+        RM3100_I2C[i].Init.OwnAddress1 = hi2c1.Init.OwnAddress1;
+        RM3100_I2C[i].Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+        RM3100_I2C[i].Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+        RM3100_I2C[i].Init.OwnAddress2 = 0;
+        RM3100_I2C[i].Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+        RM3100_I2C[i].Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+        RM3100_I2C[i].State = HAL_I2C_STATE_RESET;
+
+        if (RM3100ReadID(RM3100_ADDRESSES[i])) {
+            result = 1; // 读取设备 ID 失败，返回错误
+            break;
+        } else {
+            // 写入配置控制寄存器
+            uint8_t CCR[6] = {0, 200, 0, 200, 0, 200}; // 配置控制寄存器的值
+            HAL_StatusTypeDef status = HAL_I2C_Mem_Write(&RM3100_I2C[i], RM3100_ADDRESSES[i], ADDR_CCX, I2C_MEMADD_SIZE_8BIT, CCR, 6, 1000);
+
+            // 发送一次 poll 请求，开始测量
+            uint8_t data = POLL_XYZ;
+            HAL_StatusTypeDef status1 = HAL_I2C_Mem_Write(&RM3100_I2C[i], RM3100_ADDRESSES[i], ADDR_POLL, I2C_MEMADD_SIZE_8BIT, &data, 1, 1000);
+
+            // 检查 I2C 通信状态
+            if (status != HAL_OK || status1 != HAL_OK) {
+                printf("Error!,status=%d,status1=%d\r\n", status, status1);
+                result = 1; // 返回错误
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief 获取多个 RM3100 设备的磁场数据
+ *
+ * 该函数通过 I2C 接口从多个 RM3100 设备读取磁场数据，并将其存储在 sensorData 数组中。
+ * 如果数据未准备好或读取失败，则返回错误。
+ *
+ * @return uint8_t 返回 0 表示成功，返回 1 表示失败
+ */
+uint8_t RM3100_GetDataMultiple(void) {
+    uint8_t result = 0;
+    for (int i = 0; i < NUM_SENSORS; i++) {
+        if (RM3100_CheckDataReady(RM3100_ADDRESSES[i]) == 0x80) {
+            uint8_t temp[9] = {0};
+            HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&RM3100_I2C[i], RM3100_ADDRESSES[i], ADDR_MX, I2C_MEMADD_SIZE_8BIT, temp, 9, 1000);
+            long Mag_Data[3] = {0};
+
+            Mag_Data[0] = (long)temp[0] << 16 | (long)temp[1] << 8 | temp[2];
+            if (Mag_Data[0] >= 0x00800000) { Mag_Data[0] |= 0xff000000; }
+            Mag_Data[1] = (long)temp[3] << 16 | (long)temp[4] << 8 | temp[5];
+            if (Mag_Data[1] >= 0x00800000) { Mag_Data[1] |= 0xff000000; }
+            Mag_Data[2] = (long)temp[6] << 16 | (long)temp[7] << 8 | temp[8];
+            if (Mag_Data[2] >= 0x00800000) { Mag_Data[2] |= 0xff000000; }
+
+            sensorData[i].x = -Mag_Data[0];
+            sensorData[i].y = -Mag_Data[1];
+            sensorData[i].z = -Mag_Data[2];
+
+            // 发送一次 poll 请求，开始测量
+            uint8_t poll_request = POLL_XYZ;
+            HAL_StatusTypeDef status1 = HAL_I2C_Mem_Write(&RM3100_I2C[i], RM3100_ADDRESSES[i], ADDR_POLL, I2C_MEMADD_SIZE_8BIT, &poll_request, 1, 1000);
+            if (status != HAL_OK || status1 != HAL_OK) {
+                printf("Error!,status=%d,status1=%d\r\n", status, status1);
+                result = 1; // 返回错误
+                break;
+            }
+        } else {
+            printf("Sensor %d Data Not Ready!\r\n", i);
+            result = 1; // 返回错误
+            break;
+        }
+    }
+    return result;
+}
+
+/**
+ * @brief 读取 RM3100 设备的 ID
+ *
+ * 该函数通过 I2C 接口读取 RM3100 设备的 ID 寄存器值，并与预期值 0x1B 进行比较。
+ * 如果读取失败或 ID 值不匹配，则返回错误。
+ *
+ * @param address RM3100的I2C地址
+ * @return uint8_t 返回 0 表示成功，返回 1 表示失败
+ */
+uint8_t RM3100ReadID(uint8_t address) {
+    uint8_t data = 0;
+    HAL_StatusTypeDef status1 = HAL_I2C_Master_Transmit(&RM3100_I2C[0], address, &ADDR_HSHAKE, 1, 1000);
+    HAL_StatusTypeDef status = HAL_I2C_Master_Receive(&RM3100_I2C[0], (address | 1), &data, 1, 1000);
+
+    if (status != HAL_OK) {
+        printf("RM3100 I2C Error!\r\n");
+        return 1; // 返回错误
+    } else {
+        if (data != 0x1B) {
+            printf("RM3100 detected Error! %x\r\n", data);
+            return 1; // 返回错误
+        } else {
+            printf("RM3100 Address = %x\r\n", data);
+            return 0; // 返回成功
+        }
+    }
+}
+
+/**
+ * @brief 检查 RM3100 设备的数据是否准备好
+ *
+ * 该函数通过 I2C 接口读取 RM3100 设备的状态寄存器值，并检查数据是否准备好。
+ *
+ * @param address RM3100的I2C地址
+ * @return uint8_t 返回 0x80 表示数据准备好，返回其他值表示数据未准备好
+ */
+uint8_t RM3100_CheckDataReady(uint8_t address) {
+    uint8_t cResult;
+    HAL_I2C_Mem_Read(&RM3100_I2C[0], address, ADDR_STATUS, I2C_MEMADD_SIZE_8BIT, &cResult, 1, 1000);
+    cResult = cResult & 0x80;
+    return cResult;
+}

@@ -1,0 +1,3 @@
+C:/Users/renji/CLionProjects/i2c_rm3100/cmake-build-debug/CMakeFiles/i2c_rm3100.elf.dir
+C:/Users/renji/CLionProjects/i2c_rm3100/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/renji/CLionProjects/i2c_rm3100/cmake-build-debug/CMakeFiles/rebuild_cache.dir

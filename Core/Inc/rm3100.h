@@ -8,9 +8,13 @@
 
 #define RM3100_I2C hi2c1
 
-#define i2c1_RM3100_ADDRESS_1 0x20<<1//AD0 AD1都接地
-#define i2c1_RM3100_ADDRESS_2 0x21<<1//AD0接高 AD1接地
-#define i2c2_RM3100_ADDRESS_1 0x21<<1//AD0接地 AD1接高
+#define i2c1_RM3100_ADDRESS_1 0x20<<1 //AD0 AD1都接地
+#define i2c1_RM3100_ADDRESS_2 0x21<<1 //AD0接高 AD1接地
+#define i2c1_RM3100_ADDRESS_3 0x22<<1 //AD0接地 AD1接高
+#define i2c1_RM3100_ADDRESS_4 0x23<<1 //AD0 AD1都接高
+
+#define i2c2_RM3100_ADDRESS_1 0x20<<1 //AD0 AD1都接地
+
 
 #define RM3100_CONVERSION_INTERVAL	10000	// Microseconds, corresponds to 100 Hz (cycle count 200 on 3 axis)
 #define UTESLA_TO_GAUSS			100.0f

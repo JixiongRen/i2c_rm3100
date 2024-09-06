@@ -93,7 +93,8 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-  __HAL_RCC_I2C1_CLK_ENABLE();
+  // __HAL_RCC_I2C1_CLK_ENABLE();
+  // __HAL_RCC_I2C2_CLK_ENABLE();
   __HAL_RCC_DMA1_CLK_ENABLE();
   /* USER CODE END SysInit */
 
@@ -105,12 +106,21 @@ int main(void)
   /* USER CODE BEGIN 2 */
   RM3100_Init(i2c1_RM3100_ADDRESS_1, hi2c1);
   //RM3100_Init(i2c1_RM3100_ADDRESS_2,hi2c1);
-  RM3100_Init(i2c2_RM3100_ADDRESS_1,hi2c2);
+  RM3100_Init(i2c1_RM3100_ADDRESS_2, hi2c1);
+  RM3100_Init(i2c1_RM3100_ADDRESS_3, hi2c1);
+  RM3100_Init(i2c1_RM3100_ADDRESS_4, hi2c1);
+  //RM3100_Init(i2c2_RM3100_ADDRESS_1, hi2c2);
 
   short hx1,hy1,hz1 = 0;
   char data_string1[100];
   short hx2,hy2,hz2 = 0;
   char data_string2[100];
+  short hx3,hy3,hz3 = 0;
+  char data_string3[100];
+  short hx4,hy4,hz4 = 0;
+  char data_string4[100];
+  short hx5,hy5,hz5 = 0;
+  char data_string5[100];
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -120,14 +130,24 @@ int main(void)
     /* USER CODE END WHILE */
     /* USER CODE END WHILE */
     RM3100_GetData(i2c1_RM3100_ADDRESS_1, &hx1, &hy1, &hz1, hi2c1);
-    //RM3100_GetData(i2c1_RM3100_ADDRESS_2, &hx2, &hy2, &hz2,hi2c1);
-    RM3100_GetData(i2c2_RM3100_ADDRESS_1, &hx2, &hy2, &hz2,hi2c2);
-    printf("RM3100 hx1: %d, hy1: %d, hz1: %d\r\n", hx1, hy1, hz1);
-    printf("RM3100 hx2: %d, hy2: %d, hz2: %d\r\n", hx2, hy2, hz2);
+    RM3100_GetData(i2c1_RM3100_ADDRESS_2, &hx2, &hy2, &hz2, hi2c1);
+    RM3100_GetData(i2c1_RM3100_ADDRESS_3, &hx3, &hy3, &hz3, hi2c1);
+    RM3100_GetData(i2c1_RM3100_ADDRESS_4, &hx4, &hy4, &hz4, hi2c1);
+    //RM3100_GetData(i2c2_RM3100_ADDRESS_1, &hx5, &hy5, &hz5, hi2c2);
+    //RM3100_GetData(i2c2_RM3100_ADDRESS_1, &hx2, &hy2, &hz2,hi2c2);
+
     snprintf(data_string1, sizeof(data_string1), "1_RM3100 Mag Data: mx=%d; my=%d; mz=%d;\r\n", hx1, hy1, hz1);
     snprintf(data_string2, sizeof(data_string2), "2_RM3100 Mag Data: mx=%d; my=%d; mz=%d;\r\n", hx2, hy2, hz2);
+    snprintf(data_string3, sizeof(data_string3), "3_RM3100 Mag Data: mx=%d; my=%d; mz=%d;\r\n", hx3, hy3, hz3);
+    snprintf(data_string4, sizeof(data_string4), "4_RM3100 Mag Data: mx=%d; my=%d; mz=%d;\r\n", hx4, hy4, hz4);
+    //snprintf(data_string5, sizeof(data_string4), "5_RM3100 Mag Data: mx=%d; my=%d; mz=%d;\r\n", hx5, hy5, hz5);
+
     HAL_UART_Transmit(&huart1, (uint8_t *)data_string1, strlen(data_string1), HAL_MAX_DELAY);
     HAL_UART_Transmit(&huart1, (uint8_t *)data_string2, strlen(data_string2), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart1, (uint8_t *)data_string3, strlen(data_string3), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart1, (uint8_t *)data_string4, strlen(data_string4), HAL_MAX_DELAY);
+    //HAL_UART_Transmit(&huart1, (uint8_t *)data_string5, strlen(data_string5), HAL_MAX_DELAY);
+
     HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
     /* USER CODE BEGIN 3 */
